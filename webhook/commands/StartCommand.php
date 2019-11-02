@@ -2,6 +2,12 @@
 
     namespace Longman\TelegramBot\Commands\SystemCommands;
 
+    use IntellivoidAccounts\Exceptions\DatabaseException;
+    use IntellivoidAccounts\Exceptions\InvalidSearchMethodException;
+    use IntellivoidAccounts\Exceptions\TelegramClientNotFoundException;
+    use IntellivoidAccounts\IntellivoidAccounts;
+    use IntellivoidAccounts\Objects\TelegramClient\Chat;
+    use IntellivoidAccounts\Objects\TelegramClient\User;
     use Longman\TelegramBot\Commands\SystemCommand;
     use Longman\TelegramBot\Entities\InlineKeyboard;
     use Longman\TelegramBot\Entities\ServerResponse;
@@ -45,11 +51,18 @@
          *
          * @return ServerResponse
          * @throws TelegramException
+         * @throws DatabaseException
+         * @throws InvalidSearchMethodException
+         * @throws TelegramClientNotFoundException
          */
         public function execute()
         {
-            $message = $this->getMessage();
-            $chat_id = $message->getChat()->getId();
+            $IntellivoidAccounts = new IntellivoidAccounts();
+
+            $Client = $IntellivoidAccounts->getTelegramClientManager()->registerClient(
+                Chat::fromArray($this->getMessage()->getChat()->getRawData()),
+                User::fromArray($this->getMessage()->getFrom()->getRawData())
+            );
 
             $text = "This is the official Intellivoid Services bot for Telegram\n\n";
             $text .= "You can link your Telegram account to your Intellivoid account using this bot ";
@@ -58,9 +71,9 @@
 
             return Request::sendMessage([
                 'chat_id'      => $this->getMessage()->getChat()->getId(),
-                'text'         => $text,
+                'text'         => $Client->PublicID,
                 'reply_markup' => new InlineKeyboard([
-                    ['text' => 'Link your Intellivoid Account', 'callback_data' => 'link_account']
+                    ['text' => 'Link your Intellivoid Account', 'url' => "https://accounts.intellivoid.info/logn"]
                 ]),
             ]);
         }

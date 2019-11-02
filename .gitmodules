@@ -1,3 +1,0 @@
-[submodule "webhook/Intellivoid-Accounts"]
-	path = webhook/Intellivoid-Accounts
-	url = git@github.com:intellivoid/Intellivoid-Accounts.git

@@ -1,14 +1,31 @@
 <?php
 
-    use acm\acm;
-use Longman\TelegramBot\Exception\TelegramException;
+    use IntellivoidAccounts\IntellivoidAccounts;
+    use Longman\TelegramBot\Exception\TelegramException;
 
-require_once __DIR__ .  DIRECTORY_SEPARATOR . 'vendor' . DIRECTORY_SEPARATOR .  'autoload.php';
-    include_once(__DIR__ . DIRECTORY_SEPARATOR . 'AutoConfig.php');
+    define("__INTELLIVOID_ACCOUNTS__", __DIR__ . DIRECTORY_SEPARATOR . 'IntellivoidAccounts');
+    define("__BOT_SCRIPTS__", __DIR__ . DIRECTORY_SEPARATOR . 'scripts');
 
-    $acm = new acm(__DIR__, 'Intellivoid Telegram Service');
-    $telegram_config = $acm->getConfiguration('Telegram');
+    require_once(__DIR__ .  DIRECTORY_SEPARATOR . 'vendor' . DIRECTORY_SEPARATOR .  'autoload.php');
+    require_once(__INTELLIVOID_ACCOUNTS__ . DIRECTORY_SEPARATOR . 'IntellivoidAccounts.php');
 
+    $IntellivoidAccounts = new IntellivoidAccounts();
+    $TelegramConfiguration = $IntellivoidAccounts->getTelegramConfiguration();
+
+    define("__BOT_NAME__", $TelegramConfiguration['TgBotName']);
+    define("__BOT_TOKEN__", $TelegramConfiguration['TgBotToken']);
+    define("__BOT_HOOK__", $TelegramConfiguration['TgBotHook']);
+
+    if(strtolower($TelegramConfiguration['TgBotEnabled']) == 'true')
+    {
+        define("__BOT_ENABLED__", true);
+    }
+    else
+    {
+        define("__BOT_ENABLED__", false);
+    }
+
+    // Update Webhook
     $set_webhook = false;
     if(isset($_GET['set_webhook']))
     {
@@ -20,7 +37,7 @@ require_once __DIR__ .  DIRECTORY_SEPARATOR . 'vendor' . DIRECTORY_SEPARATOR .  
 
     try
     {
-        $telegram = new Longman\TelegramBot\Telegram($telegram_config['BotToken'], $telegram_config['BotName']);
+        $telegram = new Longman\TelegramBot\Telegram(__BOT_TOKEN__, __BOT_NAME__);
         $telegram->addCommandsPaths([__DIR__ . DIRECTORY_SEPARATOR . 'commands']);
     }
     catch (Longman\TelegramBot\Exception\TelegramException $e)
@@ -32,7 +49,7 @@ require_once __DIR__ .  DIRECTORY_SEPARATOR . 'vendor' . DIRECTORY_SEPARATOR .  
     {
         try
         {
-            $result = $telegram->setWebhook($telegram_config['BotWebhookUrl']);
+            $result = $telegram->setWebhook(__BOT_HOOK__);
             if ($result->isOk())
             {
                 echo $result->getDescription();

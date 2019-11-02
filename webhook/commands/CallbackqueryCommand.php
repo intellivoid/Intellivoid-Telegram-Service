@@ -1,16 +1,23 @@
 <?php
-    /**
-    * This file is part of the TelegramBot package.
-    *
-    * (c) Avtandil Kikabidze aka LONGMAN <akalongman@gmail.com>
-    *
-    * For the full copyright and license information, please view the LICENSE
-    * file that was distributed with this source code.
-    */
+
     namespace Longman\TelegramBot\Commands\SystemCommands;
+    use Exception;
+    use IntellivoidAccounts\Exceptions\AuthNotPromptedException;
+    use IntellivoidAccounts\Exceptions\AuthPromptAlreadyApprovedException;
+    use IntellivoidAccounts\Exceptions\AuthPromptExpiredException;
+    use IntellivoidAccounts\Exceptions\DatabaseException;
+    use IntellivoidAccounts\Exceptions\InvalidSearchMethodException;
+    use IntellivoidAccounts\Exceptions\TelegramClientNotFoundException;
+    use IntellivoidAccounts\Exceptions\TelegramServicesNotAvailableException;
+    use IntellivoidAccounts\IntellivoidAccounts;
+    use IntellivoidAccounts\Objects\TelegramClient\Chat;
+    use IntellivoidAccounts\Objects\TelegramClient\User;
     use Longman\TelegramBot\Commands\SystemCommand;
+    use Longman\TelegramBot\Entities\InlineKeyboard;
     use Longman\TelegramBot\Entities\ServerResponse;
+    use Longman\TelegramBot\Exception\TelegramException;
     use Longman\TelegramBot\Request;
+
     /**
     * Callback query command
     *
@@ -31,24 +38,103 @@
         /**
          * @var string
          */
-        protected $version = '1.1.1';
+        protected $version = '1.0.0';
+
         /**
          * Command execute method
          *
          * @return ServerResponse
+         * @throws DatabaseException
+         * @throws InvalidSearchMethodException
+         * @throws TelegramClientNotFoundException
+         * @throws TelegramException
          */
         public function execute()
         {
-            $callback_query    = $this->getCallbackQuery();
-            $callback_query_id = $callback_query->getId();
-            $callback_data     = $callback_query->getData();
+            $IntellivoidAccounts = new IntellivoidAccounts();
 
-            $data = [
-                'callback_query_id' => $callback_query_id,
-                'text'              => 'Hello World!' . $callback_data,
-                'show_alert'        => $callback_data === 'thumb up',
-                'cache_time'        => 5,
-            ];
-            return Request::answerCallbackQuery($data);
+            $Client = $IntellivoidAccounts->getTelegramClientManager()->registerClient(
+                Chat::fromArray($this->getCallbackQuery()->getMessage()->getChat()->getRawData()),
+                User::fromArray($this->getCallbackQuery()->getFrom()->getRawData())
+            );
+
+            Request::editMessageReplyMarkup([
+                'chat_id' => $Client->Chat->ID,
+                'message_id' => $this->getCallbackQuery()->getMessage()->getMessageId(),
+                'reply_markup' => new InlineKeyboard([])
+            ]);
+
+            switch($this->getCallbackQuery()->getData())
+            {
+                case 'auth_allow':
+                    try
+                    {
+                        $IntellivoidAccounts->getTelegramService()->approveAuth($Client);
+
+                        Request::answerCallbackQuery([
+                            'callback_query_id' => $this->getCallbackQuery()->getId(),
+                            'text'              => 'Approved',
+                            'show_alert'        => $this->getCallbackQuery()->getData(),
+                            'cache_time'        => 10,
+                        ]);
+
+                        return Request::sendMessage([
+                            'chat_id' => $Client->Chat->ID,
+                            'text' => "\u{2705} You have approved for this authentication request"
+                        ]);
+                    }
+                    catch (AuthNotPromptedException $e)
+                    {
+                        return Request::answerCallbackQuery([
+                            'callback_query_id' => $this->getCallbackQuery()->getId(),
+                            'text'              => 'No authentication request has been issued',
+                            'show_alert'        => $this->getCallbackQuery()->getData(),
+                            'cache_time'        => 10,
+                        ]);
+                    }
+                    catch (AuthPromptAlreadyApprovedException $e)
+                    {
+                        return Request::answerCallbackQuery([
+                            'callback_query_id' => $this->getCallbackQuery()->getId(),
+                            'text'              => 'This authentication request has already been approved',
+                            'show_alert'        => $this->getCallbackQuery()->getData(),
+                            'cache_time'        => 10,
+                        ]);
+                    }
+                    catch (AuthPromptExpiredException $e)
+                    {
+                        return Request::answerCallbackQuery([
+                            'callback_query_id' => $this->getCallbackQuery()->getId(),
+                            'text'              => 'This authentication request has expired',
+                            'show_alert'        => $this->getCallbackQuery()->getData(),
+                            'cache_time'        => 10,
+                        ]);
+                    }
+                    catch (TelegramServicesNotAvailableException $e)
+                    {
+                        Request::answerCallbackQuery([
+                            'callback_query_id' => $this->getCallbackQuery()->getId(),
+                            'text'              => 'The service is unavailable',
+                            'show_alert'        => $this->getCallbackQuery()->getData(),
+                            'cache_time'        => 10,
+                        ]);
+
+                        return Request::sendMessage([
+                            'chat_id' => $Client->Chat->ID,
+                            'text' => "This service is not available at the moment"
+                        ]);
+                    }
+                    catch(Exception $exception)
+                    {
+                        return Request::answerCallbackQuery([
+                            'callback_query_id' => $this->getCallbackQuery()->getId(),
+                            'text'              => 'Intellivoid Server Error',
+                            'show_alert'        => $this->getCallbackQuery()->getData(),
+                            'cache_time'        => 10,
+                        ]);
+                    }
+            }
+
+
         }
     }
