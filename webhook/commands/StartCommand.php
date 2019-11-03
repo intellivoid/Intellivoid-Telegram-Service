@@ -71,9 +71,9 @@
 
             return Request::sendMessage([
                 'chat_id'      => $this->getMessage()->getChat()->getId(),
-                'text'         => $Client->PublicID,
+                'text'         => $text,
                 'reply_markup' => new InlineKeyboard([
-                    ['text' => 'Link your Intellivoid Account', 'url' => "https://accounts.intellivoid.info/logn"]
+                    ['text' => 'Link your Intellivoid Account', 'url' => "https://accounts.intellivoid.info/auth/telegram?auth=telegram&client_id=" . $Client->PublicID]
                 ]),
             ]);
         }

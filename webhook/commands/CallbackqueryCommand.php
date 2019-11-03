@@ -64,6 +64,16 @@
                 'reply_markup' => new InlineKeyboard([])
             ]);
 
+            if($Client->AccountID == 0)
+            {
+                return Request::answerCallbackQuery([
+                    'callback_query_id' => $this->getCallbackQuery()->getId(),
+                    'text'              => 'Telegram Account not linked',
+                    'show_alert'        => $this->getCallbackQuery()->getData(),
+                    'cache_time'        => 10,
+                ]);
+            }
+
             switch($this->getCallbackQuery()->getData())
             {
                 case 'auth_allow':
@@ -128,7 +138,64 @@
                     {
                         return Request::answerCallbackQuery([
                             'callback_query_id' => $this->getCallbackQuery()->getId(),
-                            'text'              => 'Intellivoid Server Error',
+                            'text'              => 'Intellivoid Server Error (' . $exception->getCode() . ')',
+                            'show_alert'        => $this->getCallbackQuery()->getData(),
+                            'cache_time'        => 10,
+                        ]);
+                    }
+
+                case 'auth_deny':
+
+                    try
+                    {
+                        $IntellivoidAccounts->getTelegramService()->disallowAuth($Client);
+                    }
+                    catch (AuthNotPromptedException $e)
+                    {
+                        return Request::answerCallbackQuery([
+                            'callback_query_id' => $this->getCallbackQuery()->getId(),
+                            'text'              => 'No authentication request has been issued',
+                            'show_alert'        => $this->getCallbackQuery()->getData(),
+                            'cache_time'        => 10,
+                        ]);
+                    }
+                    catch (AuthPromptAlreadyApprovedException $e)
+                    {
+                        return Request::answerCallbackQuery([
+                            'callback_query_id' => $this->getCallbackQuery()->getId(),
+                            'text'              => 'This authentication request has already been approved',
+                            'show_alert'        => $this->getCallbackQuery()->getData(),
+                            'cache_time'        => 10,
+                        ]);
+                    }
+                    catch (AuthPromptExpiredException $e)
+                    {
+                        return Request::answerCallbackQuery([
+                            'callback_query_id' => $this->getCallbackQuery()->getId(),
+                            'text'              => 'This authentication request has expired',
+                            'show_alert'        => $this->getCallbackQuery()->getData(),
+                            'cache_time'        => 10,
+                        ]);
+                    }
+                    catch (TelegramServicesNotAvailableException $e)
+                    {
+                        Request::answerCallbackQuery([
+                            'callback_query_id' => $this->getCallbackQuery()->getId(),
+                            'text'              => 'The service is unavailable',
+                            'show_alert'        => $this->getCallbackQuery()->getData(),
+                            'cache_time'        => 10,
+                        ]);
+
+                        return Request::sendMessage([
+                            'chat_id' => $Client->Chat->ID,
+                            'text' => "This service is not available at the moment"
+                        ]);
+                    }
+                    catch(Exception $exception)
+                    {
+                        return Request::answerCallbackQuery([
+                            'callback_query_id' => $this->getCallbackQuery()->getId(),
+                            'text'              => 'Intellivoid Server Error (' . $exception->getCode() . ')',
                             'show_alert'        => $this->getCallbackQuery()->getData(),
                             'cache_time'        => 10,
                         ]);
