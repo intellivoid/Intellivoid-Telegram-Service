@@ -202,6 +202,10 @@
                     }
             }
 
+            return Request::sendMessage([
+                'chat_id' => $Client->Chat->ID,
+                'text' => "Invalid callback query"
+            ]);
 
         }
     }
