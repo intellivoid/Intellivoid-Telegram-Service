@@ -29,15 +29,14 @@
          */
         public function apply_role(string $name): bool
         {
-            $name = strtoupper($name);
-
-            if(isset($this->Roles[$name]) == false)
+            if($this->has_role($name))
             {
-                $this->Roles[] = $name;
-                return true;
+                return false;
             }
 
-            return false;
+            $name = strtoupper($name);
+            $this->Roles[] = $name;
+            return true;
         }
 
         /**
@@ -48,11 +47,28 @@
          */
         public function revoke_role(string $name): bool
         {
+            if($this->has_role($name) == false)
+            {
+                return false;
+            }
+
+            $name = strtoupper($name);
+            $this->Roles = array_diff($this->Roles, [$name]);
+            return true;
+        }
+
+        /**
+         * Determines if the role is applied
+         *
+         * @param string $name
+         * @return bool
+         */
+        public function has_role(string $name): bool
+        {
             $name = strtoupper($name);
 
-            if(isset($this->Roles[$name]))
+            if(in_array($name, $this->Roles))
             {
-                unset($this->Roles[$name]);
                 return true;
             }
 

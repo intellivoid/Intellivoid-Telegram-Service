@@ -72,7 +72,7 @@
                 'title' => $this->Title,
                 'username' => $this->Username,
                 'first_name' => $this->FirstName,
-                'last-name' => $this->LastName
+                'last_name' => $this->LastName
             );
         }
 

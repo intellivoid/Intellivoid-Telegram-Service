@@ -333,4 +333,28 @@
                 return $ResultsArray;
             }
         }
+
+        /**
+         * Deletes an application from the Database
+         *
+         * @param Application $application
+         * @return bool
+         * @throws DatabaseException
+         */
+        public function deleteApplication(Application $application): bool
+        {
+            $id = (int)$application->ID;
+
+            $Query = "DELETE FROM `applications` WHERE id=$id";
+            $QueryResults = $this->intellivoidAccounts->database->query($Query);
+
+            if($QueryResults == true)
+            {
+                return true;
+            }
+            else
+            {
+                throw new DatabaseException($Query, $this->intellivoidAccounts->database->error);
+            }
+        }
     }

@@ -4,11 +4,10 @@
     namespace IntellivoidAccounts\Abstracts\SearchMethods;
 
     /**
-     * Class TransactionRecordSearchMethod
-     * @deprecated
-     * @package IntellivoidAccounts\Abstracts
+     * Class TransactionLogSearchMethod
+     * @package IntellivoidAccounts\Abstracts\SearchMethods
      */
-    abstract class TransactionRecordSearchMethod
+    abstract class TransactionLogSearchMethod
     {
         const byId = 'id';
 

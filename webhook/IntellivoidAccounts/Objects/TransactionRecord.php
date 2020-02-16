@@ -4,66 +4,56 @@
     namespace IntellivoidAccounts\Objects;
 
 
-    use IntellivoidAccounts\Abstracts\OperatorType;
-    use IntellivoidAccounts\Abstracts\TransactionType;
-
     /**
      * Class TransactionRecord
-     * @deprecated
      * @package IntellivoidAccounts\Objects
      */
     class TransactionRecord
     {
         /**
-         * Internal Transaction ID
+         * Unique internal database ID
          *
          * @var int
          */
         public $ID;
 
         /**
-         * The Public Transaction ID
+         * Unique Public ID of this transaction
          *
          * @var string
          */
         public $PublicID;
 
         /**
-         * The Account ID that's involved with this transaction
+         * The account ID that this transaction is associated with
          *
          * @var int
          */
         public $AccountID;
 
         /**
-         * The amount that's involved in this transaction
+         * The name of the vendor or account username that this transaction is for/from
+         *
+         * @var string
+         */
+        public $Vendor;
+
+        /**
+         * The amount that was given/taken from the account
          *
          * @var float
          */
         public $Amount;
 
         /**
-         * @var OperatorType
-         */
-        public $OperatorType;
-
-        /**
-         * @var TransactionType
-         */
-        public $Type;
-
-        /**
-         * @var string
-         */
-        public $Vendor;
-
-        /**
+         * The Unix Timestamp of when this transaction took place
+         *
          * @var int
          */
         public $Timestamp;
 
         /**
-         * Creates array from object
+         * Returns an array which represents this object
          *
          * @return array
          */
@@ -73,16 +63,14 @@
                 'id' => (int)$this->ID,
                 'public_id' => $this->PublicID,
                 'account_id' => (int)$this->AccountID,
-                'amount' => (float)$this->Amount,
-                'operator_type' => (int)$this->OperatorType,
-                'type' => (int)$this->Type,
                 'vendor' => $this->Vendor,
+                'amount' => (float)$this->Amount,
                 'timestamp' => (int)$this->Timestamp
             );
         }
 
         /**
-         * Creates object form array
+         * Constructs object from array
          *
          * @param array $data
          * @return TransactionRecord
@@ -106,24 +94,14 @@
                 $TransactionRecordObject->AccountID = (int)$data['account_id'];
             }
 
-            if(isset($data['amount']))
-            {
-                $TransactionRecordObject->Amount = (float)$data['amount'];
-            }
-
-            if(isset($data['operator_type']))
-            {
-                $TransactionRecordObject->OperatorType = (int)$data['operator_type'];
-            }
-
-            if(isset($data['type']))
-            {
-                $TransactionRecordObject->Type = (int)$data['type'];
-            }
-
             if(isset($data['vendor']))
             {
                 $TransactionRecordObject->Vendor = $data['vendor'];
+            }
+
+            if(isset($data['amount']))
+            {
+                $TransactionRecordObject->Amount = (float)$data['amount'];
             }
 
             if(isset($data['timestamp']))

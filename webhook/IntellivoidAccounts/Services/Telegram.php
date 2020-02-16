@@ -120,7 +120,7 @@
 
             $keyboard = array();
 
-            if($url == null)
+            if($url !== null)
             {
                 if(Validate::url($url) == false)
                 {
@@ -134,12 +134,18 @@
                 );
             }
 
-            $Response = json_decode($this->sendRequest($this->getEndpoint('sendMessage'), array(
+            $payload = array(
                 'chat_id' => $telegramClient->Chat->ID,
                 'parse_mode' => 'html',
                 'text' => $this->emojis['BELL'] . " <b>Notification from $from</b>\n\n$message",
-                'reply_markup' => $keyboard
-            )), true);
+            );
+
+            if(count($keyboard) > 0)
+            {
+                $payload["reply_markup"] = $keyboard;
+            }
+
+            $Response = json_decode($this->sendRequest($this->getEndpoint('sendMessage'), $payload), true);
 
             /** @noinspection DuplicatedCode */
             if($Response['ok'] == false)

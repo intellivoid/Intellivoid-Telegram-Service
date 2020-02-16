@@ -8,6 +8,7 @@
     use IntellivoidAccounts\Exceptions\AccountSuspendedException;
     use IntellivoidAccounts\Exceptions\DatabaseException;
     use IntellivoidAccounts\Exceptions\EmailAlreadyExistsException;
+    use IntellivoidAccounts\Exceptions\GovernmentBackedAttackModeEnabledException;
     use IntellivoidAccounts\Exceptions\IncorrectLoginDetailsException;
     use IntellivoidAccounts\Exceptions\InvalidAccountStatusException;
     use IntellivoidAccounts\Exceptions\InvalidEmailException;
@@ -193,9 +194,13 @@
             {
                 case AccountStatus::VerificationRequired:
                 case AccountStatus::Suspended:
-                case AccountStatus::Active: break;
-                case AccountStatus::Limited: break;
-                default: throw new InvalidAccountStatusException();
+                case AccountStatus::Limited:
+                case AccountStatus::BlockedDueToGovernmentBackedAttack;
+                case AccountStatus::PasswordRecoveryMode;
+                case AccountStatus::Active:
+                    break;
+                default:
+                    throw new InvalidAccountStatusException();
             }
 
             $ID = (int)$account->ID;
@@ -280,6 +285,7 @@
          * @throws AccountNotFoundException
          * @throws AccountSuspendedException
          * @throws DatabaseException
+         * @throws GovernmentBackedAttackModeEnabledException
          * @throws IncorrectLoginDetailsException
          * @throws InvalidSearchMethodException
          */
@@ -321,6 +327,11 @@
             if($account_details->Password !== Hashing::password($password))
             {
                 throw new IncorrectLoginDetailsException();
+            }
+
+            if($account_details->Status == AccountStatus::BlockedDueToGovernmentBackedAttack)
+            {
+                throw new GovernmentBackedAttackModeEnabledException();
             }
 
             return $account_details;
@@ -408,5 +419,91 @@
             {
                 return false;
             }
+        }
+
+        /**
+         * Disables all verification methods, puts the account into a password recovery mode
+         * and returns a temporary password
+         *
+         * @param Account $account
+         * @return string
+         * @throws AccountNotFoundException
+         * @throws DatabaseException
+         * @throws InvalidAccountStatusException
+         * @throws InvalidEmailException
+         * @throws InvalidSearchMethodException
+         * @throws InvalidUsernameException
+         */
+        public function enterPasswordRecoveryMode(Account $account): string
+        {
+            // Verify the account
+            $this->getAccount(AccountSearchMethod::byId, $account->ID);
+
+            // Disable verification methods
+            $account->Configuration->VerificationMethods->RecoveryCodes->disable();
+            $account->Configuration->VerificationMethods->RecoveryCodesEnabled = false;
+            $account->Configuration->VerificationMethods->TelegramLink->disable();
+            $account->Configuration->VerificationMethods->TelegramClientLinked = false;
+            $account->Configuration->VerificationMethods->TwoFactorAuthentication->disable();
+            $account->Configuration->VerificationMethods->TwoFactorAuthenticationEnabled = false;
+
+            // Set a temporary password
+            $TemporaryPassword = Hashing::TemporaryPassword($account->ID, (int)time());
+            $account->Password = Hashing::password($TemporaryPassword);
+
+            // Alter the account status and update it
+            $account->Status = AccountStatus::PasswordRecoveryMode;
+            $this->updateAccount($account);
+
+            // Return the temporary password
+            return $TemporaryPassword;
+        }
+
+        /**
+         * Enters the account into a government backed attack mode
+         *
+         * @param Account $account
+         * @return bool
+         * @throws AccountNotFoundException
+         * @throws DatabaseException
+         * @throws InvalidAccountStatusException
+         * @throws InvalidEmailException
+         * @throws InvalidSearchMethodException
+         * @throws InvalidUsernameException
+         */
+        public function enterGovernmentBackedAttackMode(Account $account): bool
+        {
+            // Verify the account
+            $this->getAccount(AccountSearchMethod::byId, $account->ID);
+
+            // Set the mode and update it
+            $account->Status = AccountStatus::BlockedDueToGovernmentBackedAttack;
+            $this->updateAccount($account);
+
+            return true;
+        }
+
+        /**
+         * Removes the account from a government backed attack mode
+         *
+         * @param Account $account
+         * @return bool
+         * @throws AccountNotFoundException
+         * @throws DatabaseException
+         * @throws InvalidAccountStatusException
+         * @throws InvalidEmailException
+         * @throws InvalidSearchMethodException
+         * @throws InvalidUsernameException
+         */
+        public function disableGovernmentBackedAttackMode(Account $account): bool
+        {
+            // Verify the account
+            $this->getAccount(AccountSearchMethod::byId, $account->ID);
+
+            // Set the mode and update it
+            $account->Status = AccountStatus::Active;
+            $this->updateAccount($account);
+
+            return true;
         }
     }
