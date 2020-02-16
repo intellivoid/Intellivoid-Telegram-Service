@@ -42,7 +42,10 @@
     }
     catch (Longman\TelegramBot\Exception\TelegramException $e)
     {
-        echo $e->getMessage();
+        ?>
+        <h1>Error</h1>
+        <p>Something went wrong here, try again later</p>
+        <?php
     }
 
     if($set_webhook == true)
@@ -57,7 +60,10 @@
         }
         catch (Longman\TelegramBot\Exception\TelegramException $e)
         {
-            echo $e->getMessage();
+            ?>
+            <h1>Error</h1>
+            <p>Something went wrong here, try again later</p>
+            <?php
         }
     }
     else
@@ -69,6 +75,9 @@
         }
         catch (TelegramException $e)
         {
-            echo $e->getMessage();
+            ?>
+            <h1>Access Denied</h1>
+            <p>Nothing to see here, the current time is <?PHP print(hash('sha256', time() . 'IV')); ?></p>
+            <?php
         }
     }
