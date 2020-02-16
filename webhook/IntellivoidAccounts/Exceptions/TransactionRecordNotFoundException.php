@@ -3,12 +3,12 @@
 
     namespace IntellivoidAccounts\Exceptions;
 
+
     use Exception;
     use IntellivoidAccounts\Abstracts\ExceptionCodes;
 
     /**
      * Class TransactionRecordNotFoundException
-     * @deprecated
      * @package IntellivoidAccounts\Exceptions
      */
     class TransactionRecordNotFoundException extends Exception
@@ -18,6 +18,6 @@
          */
         public function __construct()
         {
-            parent::__construct("The transaction record was not found", ExceptionCodes::TransactionRecordNotFoundException, null);
+            parent::__construct("The transaction record was not found in the database", ExceptionCodes::TransactionRecordNotFoundException, null);
         }
     }

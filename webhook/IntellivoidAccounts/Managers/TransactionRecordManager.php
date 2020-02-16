@@ -3,30 +3,18 @@
 
     namespace IntellivoidAccounts\Managers;
 
-    use BasicCalculator\BC;
-    use IntellivoidAccounts\Abstracts\OperatorType;
-    use IntellivoidAccounts\Abstracts\SearchMethods\AccountSearchMethod;
-    use IntellivoidAccounts\Abstracts\SearchMethods\TransactionRecordSearchMethod;
-    use IntellivoidAccounts\Abstracts\TransactionType;
-    use IntellivoidAccounts\Exceptions\AccountNotFoundException;
+    use IntellivoidAccounts\Abstracts\SearchMethods\TransactionLogSearchMethod;
     use IntellivoidAccounts\Exceptions\DatabaseException;
-    use IntellivoidAccounts\Exceptions\InsufficientFundsException;
-    use IntellivoidAccounts\Exceptions\InvalidAccountStatusException;
-    use IntellivoidAccounts\Exceptions\InvalidEmailException;
-    use IntellivoidAccounts\Exceptions\InvalidPasswordException;
     use IntellivoidAccounts\Exceptions\InvalidSearchMethodException;
-    use IntellivoidAccounts\Exceptions\InvalidTransactionTypeException;
-    use IntellivoidAccounts\Exceptions\InvalidUsernameException;
-    use IntellivoidAccounts\Exceptions\InvalidVendorException;
     use IntellivoidAccounts\Exceptions\TransactionRecordNotFoundException;
     use IntellivoidAccounts\IntellivoidAccounts;
     use IntellivoidAccounts\Objects\TransactionRecord;
     use IntellivoidAccounts\Utilities\Hashing;
-    use IntellivoidAccounts\Utilities\Validate;
+    use msqg\Abstracts\SortBy;
+    use msqg\QueryBuilder;
 
     /**
      * Class TransactionRecordManager
-     * @deprecated Not used anymore
      * @package IntellivoidAccounts\Managers
      */
     class TransactionRecordManager
@@ -46,90 +34,29 @@
         }
 
         /**
+         * Logs the transaction
+         *
          * @param int $account_id
-         * @param float $amount
          * @param string $vendor
-         * @param int $type
-         * @return TransactionRecord
-         * @throws AccountNotFoundException
+         * @param float $amount
+         * @return bool
          * @throws DatabaseException
-         * @throws InsufficientFundsException
-         * @throws InvalidSearchMethodException
-         * @throws InvalidTransactionTypeException
-         * @throws InvalidVendorException
-         * @throws InvalidAccountStatusException
-         * @throws InvalidEmailException
-         * @throws InvalidPasswordException
-         * @throws InvalidUsernameException
-         * @throws TransactionRecordNotFoundException
          */
-        public function createTransaction(int $account_id, float $amount, string $vendor, int $type): TransactionRecord
+        public function logTransaction(int $account_id, string $vendor, float $amount): bool
         {
-            if(Validate::vendor($vendor) == false)
-            {
-                throw new InvalidVendorException();
-            }
+            $timestamp = (int)time();
+            $public_id = Hashing::TransactionRecordPublicID($account_id, $vendor, $timestamp);
+            $account_id = (int)$account_id;
+            $vendor = $this->intellivoidAccounts->database->real_escape_string($vendor);;
+            $amount = (float)$amount;
 
-            switch($type)
-            {
-                case TransactionType::Payment:
-                    $type = (int)$type;
-                    break;
-
-                case TransactionType::SubscriptionPayment:
-                    $type = (int)$type;
-                    break;
-
-                case TransactionType::Deposit:
-                    $type = (int)$type;
-                    break;
-
-                case TransactionType::Withdraw:
-                    $type = (int)$type;
-                    break;
-
-                case TransactionType::Refund:
-                    $type = (int)$type;
-                    break;
-
-                default:
-                    throw new InvalidTransactionTypeException();
-            }
-
-            $Account = $this->intellivoidAccounts->getAccountManager()->getAccount(AccountSearchMethod::byId, $account_id);
-
-            $OperatorType = OperatorType::None;
-
-            if($amount > 0)
-            {
-                $OperatorType = OperatorType::Deposit;
-                $Account->Configuration->Balance = (float)BC::add($Account->Configuration->Balance, abs($amount), 2);
-            }
-            elseif($amount < 0)
-            {
-                $OperatorType = OperatorType::Withdraw;
-                $Calculation = (float)BC::sub($Account->Configuration->Balance, abs($amount), 2);
-
-                if($Calculation < 0)
-                {
-                    throw new InsufficientFundsException();
-                }
-
-                $Account->Configuration->Balance = (float)BC::sub($Account->Configuration->Balance, abs($amount), 2);
-            }
-
-            $Timestamp = (int)time();
-            $PublicID = Hashing::transactionRecordPublicID(
-                $account_id, $Timestamp, abs($amount), $vendor, $OperatorType
-            );
-            $PublicID = $this->intellivoidAccounts->database->real_escape_string($PublicID);
-            $AccountID = (int)$account_id;
-            $Amount = abs($amount);
-            $OperatorType = (int)$OperatorType;
-            $Type = (int)$type;
-            $Vendor = $this->intellivoidAccounts->database->real_escape_string($vendor);
-
-            $Query = "INSERT INTO `transaction_records` (public_id, account_id, amount, operator_type, type, vendor, timestamp) VALUES ('$PublicID', $AccountID, $Amount, $OperatorType, $Type, '$Vendor', $Timestamp)";
+            $Query = QueryBuilder::insert_into('transaction_records', array(
+                'public_id' => $public_id,
+                'account_id' => $account_id,
+                'vendor' => $vendor,
+                'amount' => $amount,
+                'timestamp' => $timestamp
+            ));
             $QueryResults = $this->intellivoidAccounts->database->query($Query);
 
             if($QueryResults == false)
@@ -137,39 +64,45 @@
                 throw new DatabaseException($Query, $this->intellivoidAccounts->database->error);
             }
 
-            $this->intellivoidAccounts->getAccountManager()->updateAccount($Account);
-            return $this->getTransactionRecord(TransactionRecordSearchMethod::byPublicId, $PublicID);
+            return true;
         }
 
         /**
-         * Returns an existing transaction record from the database
+         * Gets an existing Transaction Record from the database
          *
          * @param string $search_method
-         * @param string $value
+         * @param $value
          * @return TransactionRecord
          * @throws DatabaseException
          * @throws InvalidSearchMethodException
          * @throws TransactionRecordNotFoundException
          */
-        public function getTransactionRecord(string $search_method, string $value): TransactionRecord
+        public function getTransactionRecord(string $search_method, $value): TransactionRecord
         {
             switch($search_method)
             {
-                case TransactionRecordSearchMethod::byId:
+                case TransactionLogSearchMethod::byId:
                     $search_method = $this->intellivoidAccounts->database->real_escape_string($search_method);
                     $value = (int)$value;
                     break;
 
-                case TransactionRecordSearchMethod::byPublicId:
+                case TransactionLogSearchMethod::byPublicId:
                     $search_method = $this->intellivoidAccounts->database->real_escape_string($search_method);
-                    $value = "'" . $this->intellivoidAccounts->database->real_escape_string($value) . "'";
+                    $value = $this->intellivoidAccounts->database->real_escape_string($value);
                     break;
 
                 default:
                     throw new InvalidSearchMethodException();
             }
 
-            $Query = "SELECT id, public_id, account_id, amount, operator_type, type, vendor, timestamp FROM `transaction_records` where $search_method=$value";
+            $Query = QueryBuilder::select('transaction_records', [
+                'id',
+                'public_id',
+                'account_id',
+                'vendor',
+                'amount',
+                'timestamp'
+            ], $search_method, $value);
             $QueryResults = $this->intellivoidAccounts->database->query($Query);
 
             if($QueryResults == false)
@@ -183,7 +116,111 @@
                     throw new TransactionRecordNotFoundException();
                 }
 
-                return TransactionRecord::fromArray($QueryResults->fetch_array(MYSQLI_ASSOC));
+                $Row = $QueryResults->fetch_array(MYSQLI_ASSOC);
+                return TransactionRecord::fromArray($Row);
+            }
+        }
+
+
+        /**
+         * Counts the total amount of records that are found
+         *
+         * @param int $account_id
+         * @return int
+         * @throws DatabaseException
+         */
+        public function getTotalRecords(int $account_id): int
+        {
+            $account_id = (int)$account_id;
+            $Query = "SELECT COUNT(id) AS total FROM `transaction_records` WHERE account_id=$account_id";
+
+            $QueryResults = $this->intellivoidAccounts->database->query($Query);
+            if($QueryResults == false)
+            {
+                throw new DatabaseException($Query, $this->intellivoidAccounts->database->error);
+            }
+            else
+            {
+                return (int)$QueryResults->fetch_array()['total'];
+            }
+        }
+
+        /**
+         * Returns an array of Transaction Records
+         *
+         * @param int $account_id
+         * @param int $offset
+         * @param int $limit
+         * @return array
+         * @throws DatabaseException
+         */
+        public function getRecords(int $account_id, int $offset = 0, $limit = 50): array
+        {
+            $account_id = (int)$account_id;
+
+            $Query = QueryBuilder::select('transaction_records', [
+                'id',
+                'public_id',
+                'account_id',
+                'vendor',
+                'amount',
+                'timestamp'
+            ], 'account_id', $account_id, null, null, $limit, $offset);
+
+            $QueryResults = $this->intellivoidAccounts->database->query($Query);
+            if($QueryResults == false)
+            {
+                throw new DatabaseException($Query, $this->intellivoidAccounts->database->error);
+            }
+            else
+            {
+                $ResultsArray = [];
+
+                while($Row = $QueryResults->fetch_assoc())
+                {
+                    $ResultsArray[] = $Row;
+                }
+
+                return $ResultsArray;
+            }
+        }
+
+        /**
+         * Returns the newer recent transaction records
+         *
+         * @param int $account_id
+         * @param int $limit
+         * @return array
+         * @throws DatabaseException
+         */
+        public function getNewRecords(int $account_id, $limit = 50): array
+        {
+            $account_id = (int)$account_id;
+
+            $Query = QueryBuilder::select('transaction_records', [
+                'id',
+                'public_id',
+                'account_id',
+                'vendor',
+                'amount',
+                'timestamp'
+            ], 'account_id', $account_id, 'timestamp', SortBy::descending, $limit);
+
+            $QueryResults = $this->intellivoidAccounts->database->query($Query);
+            if($QueryResults == false)
+            {
+                throw new DatabaseException($Query, $this->intellivoidAccounts->database->error);
+            }
+            else
+            {
+                $ResultsArray = [];
+
+                while($Row = $QueryResults->fetch_assoc())
+                {
+                    $ResultsArray[] = $Row;
+                }
+
+                return $ResultsArray;
             }
         }
     }

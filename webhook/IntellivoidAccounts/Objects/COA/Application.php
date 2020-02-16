@@ -15,7 +15,7 @@
     class Application
     {
         /**
-         * Unique Internal Databsae ID
+         * Unique Internal Database ID
          *
          * @var int
          */
@@ -151,18 +151,12 @@
          *
          * @param string $flag
          * @return bool
-         * @throws InvalidApplicationFlagException
          */
         public function apply_flag(string $flag): bool
         {
-            if(isset($this->Flags[$flag]))
+            if($this->has_flag($flag))
             {
                 return false;
-            }
-
-            if(Validate::verify_application_flag($flag) == false)
-            {
-                throw new InvalidApplicationFlagException();
             }
 
             $this->Flags[] = $flag;
@@ -177,12 +171,12 @@
          */
         public function remove_flag(string $flag): bool
         {
-            if(isset($this->Flags[$flag]) == false)
+            if($this->has_flag($flag) == false)
             {
                 return false;
             }
 
-            unset($this->Flags[$flag]);
+            $this->Flags = array_diff($this->Flags, [$flag]);
             return true;
         }
 
@@ -213,12 +207,9 @@
          */
         public function has_flag(string $flag): bool
         {
-            if($this->Flags !== null)
+            if(in_array($flag, $this->Flags))
             {
-                if(in_array($flag, $this->Flags))
-                {
-                    return true;
-                }
+                return true;
             }
 
             return false;
