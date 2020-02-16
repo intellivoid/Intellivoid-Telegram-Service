@@ -149,6 +149,18 @@
                     try
                     {
                         $IntellivoidAccounts->getTelegramService()->disallowAuth($Client);
+
+                        Request::answerCallbackQuery([
+                            'callback_query_id' => $this->getCallbackQuery()->getId(),
+                            'text'              => 'Denied',
+                            'show_alert'        => $this->getCallbackQuery()->getData(),
+                            'cache_time'        => 10,
+                        ]);
+
+                        return Request::sendMessage([
+                            'chat_id' => $Client->Chat->ID,
+                            'text' => "\u{1F6AB} You have denied this authentication request"
+                        ]);
                     }
                     catch (AuthNotPromptedException $e)
                     {
