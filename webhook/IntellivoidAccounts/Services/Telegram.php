@@ -288,6 +288,61 @@
         }
 
         /**
+         * Sends a notification to the client indicating about the password reset clause
+         *
+         * @param TelegramClient $telegramClient
+         * @return bool
+         * @throws DatabaseException
+         * @throws TelegramActionFailedException
+         * @throws TelegramApiException
+         * @throws TelegramServicesNotAvailableException
+         */
+        public function sendPasswordResetNotification(TelegramClient $telegramClient)
+        {
+            if(strtolower($this->intellivoidAccounts->getTelegramConfiguration()['TgBotEnabled']) !== "true")
+            {
+                throw new TelegramServicesNotAvailableException();
+            }
+
+            $Response = json_decode($this->sendRequest($this->getEndpoint('sendMessage'), array(
+                'chat_id' => $telegramClient->Chat->ID,
+                'parse_mode' => 'html',
+                'text' =>
+                    "Your Telegram account has been unlinked from your Intellivoid Account because you requested for a password reset. You can add your Telegram account again after you update your password.\n\n".
+                    "If you did not request this, contact @IntellivoidSupport immediately"
+            )), true);
+
+            /** @noinspection DuplicatedCode */
+            if($Response['ok'] == false)
+            {
+                $Message = "unknown";
+                $ErrorCode = 0;
+
+                if(isset($Response['description']))
+                {
+                    $Message = $Response['description'];
+                }
+
+                if(isset($Response['error_code']))
+                {
+                    $ErrorCode = (int)$Response['error_code'];
+                }
+
+                $telegramClient->Available = false;
+                $telegramClient->LastActivityTimestamp = (int)time();
+                $this->intellivoidAccounts->getTelegramClientManager()->updateClient($telegramClient);
+
+                throw new TelegramActionFailedException($Message, $ErrorCode);
+            }
+
+            $telegramClient->Available = true;
+            $telegramClient->LastActivityTimestamp = (int)time();
+            $this->intellivoidAccounts->getTelegramClientManager()->updateClient($telegramClient);
+
+            return true;
+        }
+
+        /**
          * Prompts the user for authentication
          *
          * @param TelegramClient $telegramClient
