@@ -73,7 +73,7 @@
                 'chat_id'      => $this->getMessage()->getChat()->getId(),
                 'text'         => $text,
                 'reply_markup' => new InlineKeyboard([
-                    ['text' => 'Link your Intellivoid Account', 'url' => "https://accounts.intellivoid.info/auth/telegram?auth=telegram&client_id=" . $Client->PublicID]
+                    ['text' => 'Link your Intellivoid Account', 'url' => "https://accounts.intellivoid.net/auth/telegram?auth=telegram&client_id=" . $Client->PublicID]
                 ]),
             ]);
         }
