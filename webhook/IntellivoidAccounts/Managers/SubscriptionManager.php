@@ -433,7 +433,7 @@
                 SubscriptionPlanSearchMethod::byId, $subscription->SubscriptionPlanID
             );
             $Application = $this->intellivoidAccounts->getApplicationManager()->getApplication(
-                ApplicationSearchMethod::byApplicationId, $SubscriptionPlan->ApplicationID
+                ApplicationSearchMethod::byId, $SubscriptionPlan->ApplicationID
             );
 
             $this->intellivoidAccounts->getTransactionManager()->processPayment(
